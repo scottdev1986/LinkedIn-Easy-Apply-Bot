@@ -34,7 +34,7 @@ def setupLogger() -> None:
     log.setLevel(logging.DEBUG)
     c_handler = logging.StreamHandler()
     c_handler.setLevel(logging.DEBUG)
-    c_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%H:%M:%S')
+    c_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s - (%(filename)s:%(lineno)s)', '%H:%M:%S')
     c_handler.setFormatter(c_format)
     log.addHandler(c_handler)
 
@@ -102,10 +102,10 @@ class EasyApplyBot:
         log.info("Logging in.....Please wait :)  ")
         self.browser.get("https://www.linkedin.com/login?trk=guest_homepage-basic_nav-header-signin")
         try:
-            user_field = self.browser.find_element("id","username")
-            pw_field = self.browser.find_element("id","password")
+            user_field = self.browser.find_element("id", "username")
+            pw_field = self.browser.find_element("id", "password")
             login_button = self.browser.find_element("xpath",
-                        '//*[@id="organic-div"]/form/div[3]/button')
+                                                     '//*[@id="organic-div"]/form/div[3]/button')
             user_field.send_keys(username)
             user_field.send_keys(Keys.TAB)
             time.sleep(2)
@@ -123,8 +123,6 @@ class EasyApplyBot:
     def start_apply(self, positions, locations) -> None:
         start: float = time.time()
         self.fill_data()
-
-        
 
         combos: list = []
         while len(combos) < len(positions) * len(locations):
@@ -178,20 +176,20 @@ class EasyApplyBot:
 
                 # get job links, (the following are actually the job card objects)
                 links = self.browser.find_elements("xpath",
-                    '//div[@data-job-id]'
-                )
+                                                   '//div[@data-job-id]'
+                                                   )
 
                 if len(links) == 0:
                     log.debug("No links found")
                     break
 
                 IDs: list = []
-                
+
                 # children selector is the container of the job cards on the left
                 for link in links:
                     children = link.find_elements("xpath",
-                        '//ul[@class="scaffold-layout__list-container"]'
-                    )
+                                                  '//ul[@class="scaffold-layout__list-container"]'
+                                                  )
                     for child in children:
                         if child.text not in self.blacklist:
                             temp = link.get_attribute("data-job-id")
@@ -210,8 +208,8 @@ class EasyApplyBot:
                     count_job = 0
                     self.avoid_lock()
                     self.browser, jobs_per_page = self.next_jobs_page(position,
-                                                                    location,
-                                                                    jobs_per_page)
+                                                                      location,
+                                                                      jobs_per_page)
                 # loop over IDs to apply
                 for i, jobID in enumerate(jobIDs):
                     count_job += 1
@@ -222,6 +220,15 @@ class EasyApplyBot:
                     # word filter to skip positions not wanted
 
                     if button is not False:
+                        # The job title is located in <h1 class="t-24 t-bold jobs-unified-top-card__job-title">Senior Software Engineer</h1>
+                        job_title = self.browser.find_element("xpath", '//h1[@class="t-24 t-bold jobs-unified-top-card__job-title"]')
+                        log.debug(f"Job Title: {job_title.text}")
+
+                        # if the job title is empty, use backup method
+                        if job_title.text == "":
+                            job_title = self.browser.title
+                            log.debug(f"Job Title: {job_title}")
+
                         if any(word in self.browser.title for word in blackListTitles):
                             log.info('skipping this application, a blacklisted keyword was found in the job position')
                             string_easy = "* Contains blacklisted keyword"
@@ -261,8 +268,8 @@ class EasyApplyBot:
                         ****************************************\n\n""")
                         self.avoid_lock()
                         self.browser, jobs_per_page = self.next_jobs_page(position,
-                                                                        location,
-                                                                        jobs_per_page)
+                                                                          location,
+                                                                          jobs_per_page)
             except Exception as e:
                 print(e)
 
@@ -293,13 +300,13 @@ class EasyApplyBot:
     def get_easy_apply_button(self):
         try:
             button = self.browser.find_elements("xpath",
-                '//button[contains(@class, "jobs-apply-button")]'
-            )
+                                                '//button[contains(@class, "jobs-apply-button")]'
+                                                )
 
             EasyApplyButton = button[0]
-            
-        except Exception as e: 
-            print("Exception:",e)
+
+        except Exception as e:
+            print("Exception:", e)
             EasyApplyButton = False
 
         return EasyApplyButton
@@ -308,23 +315,17 @@ class EasyApplyBot:
         def is_present(button_locator) -> bool:
             return len(self.browser.find_elements(button_locator[0],
                                                   button_locator[1])) > 0
+
         # try:
         next_locater = (By.CSS_SELECTOR,
                         "button[aria-label='Continue to next step']")
 
-        
-
-
-
         input_field = self.browser.find_element("xpath", "//input[contains(@name,'phoneNumber')]")
-
 
         if input_field:
             input_field.clear()
             input_field.send_keys(self.phone_number)
             time.sleep(random.uniform(4.5, 6.5))
-        
-
 
             next_locater = (By.CSS_SELECTOR,
                             "button[aria-label='Continue to next step']")
@@ -338,7 +339,7 @@ class EasyApplyBot:
 
             if is_present(error_locator):
                 for element in self.browser.find_elements(error_locator[0],
-                                                            error_locator[1]):
+                                                          error_locator[1]):
                     text = element.text
                     if "Please enter a valid answer" in text:
                         button = None
@@ -355,8 +356,6 @@ class EasyApplyBot:
 
         else:
             log.debug(f"Could not find phone number field")
-                
-
 
     def send_resume(self) -> bool:
         def is_present(button_locator) -> bool:
@@ -402,7 +401,7 @@ class EasyApplyBot:
                 # Click Next or submitt button if possible
                 button: None = None
                 buttons: list = [next_locater, review_locater, follow_locator,
-                           submit_locater, submit_application_locator]
+                                 submit_locater, submit_application_locator]
                 for i, button_locator in enumerate(buttons):
                     if is_present(button_locator):
                         button: None = self.wait.until(EC.element_to_be_clickable(button_locator))
