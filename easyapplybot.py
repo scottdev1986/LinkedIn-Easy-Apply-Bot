@@ -1,3 +1,4 @@
+import sys
 import time, random, os, csv, platform
 import logging
 from selenium import webdriver
@@ -12,6 +13,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import pyautogui
 
+from utils.util import parse_job_title
 from urllib.request import urlopen
 from webdriver_manager.chrome import ChromeDriverManager
 import re
@@ -139,6 +141,14 @@ class EasyApplyBot:
 
     # self.finish_apply() --> this does seem to cause more harm than good, since it closes the browser which we usually don't want, other conditions will stop the loop and just break out
 
+    def parse_job_title(self, job_title: str) -> bool:
+        """Parse job title."""
+        for title in self.blackListTitles:
+            if title in job_title:
+                log.info(f"Job title {job_title} is blacklisted")
+                return True
+        return False
+
     def applications_loop(self, position, location):
 
         count_application = 0
@@ -227,9 +237,11 @@ class EasyApplyBot:
                         # if the job title is empty, use backup method
                         if job_title.text == "":
                             job_title = self.browser.title
+
                             log.debug(f"Job Title: {job_title}")
 
-                        if any(word in self.browser.title for word in blackListTitles):
+                        # First check if the job title is in the blackListTitles
+                        if parse_job_title(job_title.text, self.blackListTitles):
                             log.info('skipping this application, a blacklisted keyword was found in the job position')
                             string_easy = "* Contains blacklisted keyword"
                             result = False
